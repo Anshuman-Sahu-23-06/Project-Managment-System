@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+
 const app = express();
 
 // Basic Configurations
@@ -16,6 +17,12 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
+
+// Import the Routes
+import healthCheckRouter from "./routes/HealthCheck.routes.js";
+
+app.use("/api/v1/healthcheck", healthCheckRouter);
+
 
 app.get("/", (req, res) =>{
   res.send("Welcome to Backend Project.")
