@@ -20,12 +20,31 @@ app.use(
 
 // Import the Routes
 import healthCheckRouter from "./routes/HealthCheck.routes.js";
+import authRouter from "./routes/auth.routes.js";
 
 app.use("/api/v1/healthcheck", healthCheckRouter);
-
+app.use("/api/v1/auth", authRouter);
 
 app.get("/", (req, res) =>{
   res.send("Welcome to Backend Project.")
+});
+
+import { ApiError } from "./utils/api-error.js";
+
+app.use((err, req, res, next) => {
+  if (err instanceof ApiError) {
+    return res.status(err.statusCode || 500).json({
+      success: err.success,
+      message: err.message,
+      errors: err.errors,
+      data: err.data
+    });
+  }
+  return res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    stack: err.stack
+  });
 });
 
 export default app;
