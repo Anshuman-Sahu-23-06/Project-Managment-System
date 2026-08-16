@@ -33,4 +33,20 @@ const userRegisterValidator = () =>{
     ]
 }
 
-export{userRegisterValidator}
+const userLoginValidator = () =>{
+    return[
+        body("email").optional()
+        .isEmail()
+        .withMessage("Email is not valid")
+        .normalizeEmail(),
+        body("password")
+        .notEmpty()
+        .isLength({min: 6})
+        .withMessage("Password must be at least 6 characters long"),
+        body("fullname")
+        .optional()
+        .isLength({min: 3})
+        .withMessage("Fullname must be at least 3 characters long")
+    ]
+}
+export{userRegisterValidator, userLoginValidator}
