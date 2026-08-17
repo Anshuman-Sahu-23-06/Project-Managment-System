@@ -1,18 +1,77 @@
 import { User } from "../models/user.models.js";
 import { Project } from "../models/project.models.js";
-import { ProjectMember } from "../models/ProjectMember.model.js";
+import { ProjectMember } from "../models/projectMember.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import mongoose from "mongoose";
 import { UserRolesEnum } from "../utils/constants.js";
+import { pipeline } from "nodemailer/lib/xoauth2/index.js";
 
 const getProjects = asyncHandler(async (req, res) => {
-    //Test
+  const project = await ProjectMember.aggregate([
+    {
+      $match: {
+        user: new mongoose.ObjectId(req.user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "projects",
+        localField: "project",
+        foreignField: "_id",
+        as: "project",
+        pipeline: [
+          {
+            $lookup: {
+              from: "projectmembers",
+              localField: "_id",
+              foreignField: "projects",
+              as: "projectMembers",
+            },
+          },
+          {
+            $addFields: {
+              members: { $size: "$projectMembers" },
+            },
+          },
+          {
+            $unwind: "$project"
+          },
+          {
+            $project:{
+              _id:1,
+              name : 1,
+              description: 1,
+              members: 1,
+              createdAt: 1,
+              createdBy: 1,
+            },
+            role: 1,
+            _id: 0
+          }
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, project, "Projects fetched successfully"));
 });
 
 const getProjectById = asyncHandler(async (req, res) => {
-  //Test
+  const {projectId} = req.params;
+
+  const project = await Project.findById(projectId);
+
+  if(!project){
+    throw new ApiError(404, "Project not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, project, "Project fetched successfully"));
 });
 
 const createProject = asyncHandler(async (req, res) => {
@@ -32,70 +91,134 @@ const createProject = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(
-        new ApiResponse(
-            200,
-            project,
-            "Project created successfully"
-        ));
+    .json(new ApiResponse(200, project, "Project created successfully"));
 });
 
 const updateProject = asyncHandler(async (req, res) => {
-    const {name, description} = req.body
-    const {projectId} = req.params
+  const { name, description } = req.body;
+  const { projectId } = req.params;
 
-    const project = await Project.findByIdAndUpdate(
-        projectId,
-        {
-            name,
-            description
-        },
-        {
-            new: true
-        }
-    )
+  const project = await Project.findByIdAndUpdate(
+    projectId,
+    {
+      name,
+      description,
+    },
+    {
+      new: true,
+    },
+  );
 
-    if (!project) {
-        throw new ApiError(404, "Project not found")
-    }
+  if (!project) {
+    throw new ApiError(404, "Project not found");
+  }
 
-    return res
+  return res
     .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            project,
-            "Project updated successfully"
-        )
-    )
+    .json(new ApiResponse(200, project, "Project updated successfully"));
 });
 
 const deleteProject = asyncHandler(async (req, res) => {
-    const {projectId} = req.params
+  const { projectId } = req.params;
 
-    const project = await Project.findByIdAndDelete(projectId)
+  const project = await Project.findByIdAndDelete(projectId);
 
-    if (!project) {
-        throw new ApiError(404, "Project not found")
-    }
+  if (!project) {
+    throw new ApiError(404, "Project not found");
+  }
 
-    return res
+  return res
     .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            project,
-            "Project deleted successfully"
-        )
-    )
+    .json(new ApiResponse(200, project, "Project deleted successfully"));
 });
 
 const addMembersToProject = asyncHandler(async (req, res) => {
-  //Test
+  const {email, role} = req.body;
+  const {projectId} = req.params;
+  const user = await User.findOne({email});
+
+  if(!user){
+    throw new ApiError(404, "User does not exist");
+  }
+
+  const projectMember = await ProjectMember.findByIdAndUpdate(
+    {
+      user: new mongoose.Types.ObjectId(user._id),
+      project: new mongoose.Types.ObjectId(projectId),
+    },
+    {
+      user: new mongoose.Types.ObjectId(user._id),
+      project: new mongoose.Types.ObjectId(projectId),
+      role: role,
+    },
+    {
+      new: true,
+      upsert: true,
+    },
+  );
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, projectMember, "Member added successfully"));
 });
 
 const getProjectMembers = asyncHandler(async (req, res) => {
-  //Test
+  const {projectId} = req.params;
+  const projectMembers = await ProjectMember.find({
+    project: new mongoose.Types.ObjectId(projectId),
+  });
+
+  if (!projectMembers) {
+    throw new ApiError(404, "Project members not found");
+  }
+
+  const projectMember = await ProjectMember.aggregate([
+    {
+      $match: {
+        project: new mongoose.Types.ObjectId(projectId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+              email: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        user: {
+          $arrayElemAt: ["$user", 0],
+        },
+      },
+    },
+    {
+      $project: {
+        project: 1,
+        user: 1,
+        role: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        _id: 0,
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, projectMembers, "Project members fetched successfully"));
 });
 
 const updateMemberRole = asyncHandler(async (req, res) => {
