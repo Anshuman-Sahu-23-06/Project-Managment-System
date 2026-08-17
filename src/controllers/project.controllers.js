@@ -5,7 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import mongoose from "mongoose";
-import { UserRolesEnum } from "../utils/constants.js";
+import { AvailableUserRole, UserRolesEnum } from "../utils/constants.js";
 import { pipeline } from "nodemailer/lib/xoauth2/index.js";
 
 const getProjects = asyncHandler(async (req, res) => {
@@ -36,20 +36,20 @@ const getProjects = asyncHandler(async (req, res) => {
             },
           },
           {
-            $unwind: "$project"
+            $unwind: "$project",
           },
           {
-            $project:{
-              _id:1,
-              name : 1,
+            $project: {
+              _id: 1,
+              name: 1,
               description: 1,
               members: 1,
               createdAt: 1,
               createdBy: 1,
             },
             role: 1,
-            _id: 0
-          }
+            _id: 0,
+          },
         ],
       },
     },
@@ -61,11 +61,11 @@ const getProjects = asyncHandler(async (req, res) => {
 });
 
 const getProjectById = asyncHandler(async (req, res) => {
-  const {projectId} = req.params;
+  const { projectId } = req.params;
 
   const project = await Project.findById(projectId);
 
-  if(!project){
+  if (!project) {
     throw new ApiError(404, "Project not found");
   }
 
@@ -133,11 +133,11 @@ const deleteProject = asyncHandler(async (req, res) => {
 });
 
 const addMembersToProject = asyncHandler(async (req, res) => {
-  const {email, role} = req.body;
-  const {projectId} = req.params;
-  const user = await User.findOne({email});
+  const { email, role } = req.body;
+  const { projectId } = req.params;
+  const user = await User.findOne({ email });
 
-  if(!user){
+  if (!user) {
     throw new ApiError(404, "User does not exist");
   }
 
@@ -163,7 +163,7 @@ const addMembersToProject = asyncHandler(async (req, res) => {
 });
 
 const getProjectMembers = asyncHandler(async (req, res) => {
-  const {projectId} = req.params;
+  const { projectId } = req.params;
   const projectMembers = await ProjectMember.find({
     project: new mongoose.Types.ObjectId(projectId),
   });
@@ -218,15 +218,77 @@ const getProjectMembers = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, projectMembers, "Project members fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        projectMembers,
+        "Project members fetched successfully",
+      ),
+    );
 });
 
 const updateMemberRole = asyncHandler(async (req, res) => {
-  //Test
+  const { projectId, userId } = req.params;
+  const { newRole } = req.body;
+
+  if (!AvailableUserRole.includes(newRole)) {
+    throw new ApiError(400, "Invalid role");
+  }
+
+  const projectMember = await ProjectMember.findOneAndUpdate(
+    {
+      user: new mongoose.Types.ObjectId(userId),
+      project: new mongoose.Types.ObjectId(projectId),
+    },
+    {
+      role: newRole,
+    },
+    {
+      new: true,
+    },
+  );
+
+  if (!projectMember) {
+    throw new ApiError(404, "Project Member Not Found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, projectMember, "Member role updated successfully"),
+    );
 });
 
 const deleteMemberRole = asyncHandler(async (req, res) => {
-  //Test
+  const { projectId, userId } = req.params;
+  const { role } = req.body;
+
+  if (!AvailableUserRole.includes(newRole)) {
+    throw new ApiError(400, "Invalid role");
+  }
+
+  let projectMember = await ProjectMember.findOneAndDelete({
+    user: new mongoose.Types.ObjectId(userId),
+    project: new mongoose.Types.ObjectId(projectId),
+  });
+
+  if (!projectMember) {
+    throw new ApiError(404, "Project Member Not Found");
+  }
+
+  projectMember.role = await ProjectMember.findByIdAndDelete(
+    projectMember._id,
+  );
+
+  if (!projectMember) {
+    throw new ApiError(404, "Project Member Not Found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, projectMember, "Member role deleted successfully"),
+    );
 });
 
 export {
