@@ -1,5 +1,5 @@
 import { User } from "../models/user.model.js";
-import {Project, ProjectMember} from "../models/projectMember.model.js";
+import { ProjectMember } from "../models/ProjectMember.model.js";
 import { ApiError } from "../utils/api-error.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import jwt from 'jsonwebtoken';
@@ -26,7 +26,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
 })
 
 export const validateProjectPermission = (roles = []) => {
-    asyncHandler(async(req, res, next) =>{
+    return asyncHandler(async(req, res, next) =>{
         const {projectId} = req.params;
         
         if(!projectId){

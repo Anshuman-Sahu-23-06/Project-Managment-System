@@ -90,7 +90,7 @@ const userResetForgotPasswordValidator = () =>{
     ]
 }
 
-const createProjectvalidator = () =>{
+const createProjectValidator = () =>{
     return[
         body("name")
         .notEmpty()
@@ -105,7 +105,7 @@ const createProjectvalidator = () =>{
 const addMembertoProjectValidator = () =>{
     return[
         body("email")
-        .trim
+        .trim()
         .notEmpty()
         .withMessage("Email is required")
         .isEmail()
@@ -118,6 +118,40 @@ const addMembertoProjectValidator = () =>{
     ]
 }
 
+const updateProjectValidator = () =>{
+    return[
+        body("name")
+        .optional()
+        .notEmpty()
+        .withMessage("Project name cannot be empty"),
+        body("description")
+        .optional()
+    ]
+}
+
+const updateMemberRoleValidator = () =>{
+    return[
+        body("newRole")
+        .notEmpty()
+        .withMessage("Role is required")
+        .isIn(AvailableUserRole)
+        .withMessage("Role is Invalid"),
+    ]
+}
+
+const deleteMemberRoleValidator = () =>{
+    return[
+        body("role")
+        .notEmpty()
+        .withMessage("Role is required")
+        .isIn(AvailableUserRole)
+        .withMessage("Role is Invalid"),
+    ]
+}
+
+const projectParamsValidator = () =>{
+    return[]
+}
 
 export{
     userRegisterValidator,
@@ -125,5 +159,10 @@ export{
     userChangeCurrentPasswordValidator,
     userForgotPasswordValidator,
     userResetForgotPasswordValidator,
-    createProjectvalidator
+    createProjectValidator,
+    addMembertoProjectValidator,
+    updateProjectValidator,
+    updateMemberRoleValidator,
+    deleteMemberRoleValidator,
+    projectParamsValidator
 }

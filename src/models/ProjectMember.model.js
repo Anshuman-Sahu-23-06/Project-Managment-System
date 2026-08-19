@@ -1,5 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose";
-import { AvailableUserRole, UserRoleEnum } from "../utils/constants.js";
+import { AvailableUserRole, UserRolesEnum } from "../utils/constants.js";
 
 const projectMemberSchema = new Schema(
   {
@@ -16,11 +16,11 @@ const projectMemberSchema = new Schema(
     role: {
       type: String,
       enum: AvailableUserRole,
-      default: UserRoleEnum.MEMBER,
+      default: UserRolesEnum.MEMBER,
     },
   },
 
   { timestamps: true },
 );
 
-export const Project = mongoose.model("Project", ProjectSchema);
+export const ProjectMember = mongoose.model("ProjectMember", projectMemberSchema);
